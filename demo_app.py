@@ -10,11 +10,26 @@ from pathlib import Path
 
 
 # -------------------------------------------------------------------------
-# Test data
+# Test data — two sources for multi-source sequence testing
 # -------------------------------------------------------------------------
 TEST_DIR = Path(__file__).parent / "test_files"
-TEST_AUDIO = TEST_DIR / "short_test_audio.mp3"
-TEST_TEXT = (TEST_DIR / "short_test_audio.txt").read_text().strip()
+
+TEST_SOURCES = [
+    {
+        "audio": TEST_DIR / "short_test_audio.mp3",
+        "text": (TEST_DIR / "short_test_audio.txt").read_text().strip(),
+        "label": "short_test_audio.mp3",
+    },
+    {
+        "audio": TEST_DIR / "02 - 1. Laying Plans.mp3",
+        "text": (TEST_DIR / "02 - 1. Laying Plans.txt").read_text().strip(),
+        "label": "02 - 1. Laying Plans.mp3",
+    },
+]
+
+# Keep single-source reference for display
+TEST_AUDIO = TEST_SOURCES[0]["audio"]
+TEST_TEXT = TEST_SOURCES[0]["text"]
 
 
 def main():
@@ -152,24 +167,37 @@ def main():
     )
 
     # -------------------------------------------------------------------------
-    # Job args builder
+    # Job args builder — returns list of (args, kwargs) for each source
     # -------------------------------------------------------------------------
     def build_fa_args(state_store, workflow_id, session_id):
-        """Build arguments for the forced alignment plugin."""
-        return (str(TEST_AUDIO),), {"text": TEST_TEXT}
+        """Build arguments for the forced alignment plugin — one per source."""
+        return [
+            ((str(src["audio"]),), {"text": src["text"]})
+            for src in TEST_SOURCES
+        ]
 
     # -------------------------------------------------------------------------
-    # Completion callback
+    # Completion callback — receives list of results (one per source)
     # -------------------------------------------------------------------------
-    result_store = {"last_result": None}
+    result_store = {"last_results": None}
 
-    async def on_fa_complete(job, request, sess):
-        """Handle FA completion — store result for display."""
-        result_store["last_result"] = job.result
-        word_count = len(job.result.get("items", [])) if isinstance(job.result, dict) else 0
-        duration = (job.completed_at - job.started_at) if job.started_at and job.completed_at else 0
+    async def on_fa_complete(results, request, sess):
+        """Handle FA sequence completion — store results for display."""
+        result_store["last_results"] = results
 
-        # OOB update to show result summary
+        # Summarize each source
+        source_summaries = []
+        for i, result in enumerate(results):
+            word_count = len(result.get("items", [])) if isinstance(result, dict) else 0
+            label = TEST_SOURCES[i]["label"] if i < len(TEST_SOURCES) else f"Source {i+1}"
+            source_summaries.append(
+                Div(
+                    Span(f"{label}: ", cls=combine_classes(font_size.sm, font_weight.semibold)),
+                    Span(f"{word_count} words aligned", cls=font_size.sm),
+                    cls=m.b(1),
+                )
+            )
+
         summary = Div(
             Div(
                 Span("Last Result", cls=combine_classes(font_weight.bold, font_size.sm)),
@@ -178,15 +206,11 @@ def main():
             Div(
                 Span("Status: ", cls=font_size.sm),
                 Span("Completed", cls=combine_classes(badge, badge_colors.success, font_size.xs)),
+                Span(f" ({len(results)} source{'s' if len(results) > 1 else ''})",
+                     cls=font_size.sm),
                 cls=m.b(1),
             ),
-            Div(
-                Span(f"Words aligned: {word_count}", cls=font_size.sm),
-                cls=m.b(1),
-            ),
-            Div(
-                Span(f"Duration: {duration:.1f}s", cls=font_size.sm),
-            ),
+            *source_summaries,
             id="result-summary",
             hx_swap_oob="innerHTML:#result-summary",
             cls=combine_classes(p(4), rounded.lg, bg_dui.base_200, m.t(4)),
@@ -301,17 +325,18 @@ def main():
                     cls=m.b(1),
                 ),
                 Div(
-                    Span("Audio: ", cls=font_size.sm),
-                    Span(str(TEST_AUDIO.name),
-                         cls=combine_classes(font_size.sm, font_family.mono)),
+                    Span(f"Sources: {len(TEST_SOURCES)} files", cls=font_size.sm),
                     cls=m.b(1),
                 ),
-                Div(
-                    Span("Text: ", cls=font_size.sm),
-                    Span(f"{len(TEST_TEXT)} chars, {len(TEST_TEXT.split())} words",
-                         cls=combine_classes(font_size.sm, font_family.mono)),
-                    cls=m.b(1),
-                ),
+                *[
+                    Div(
+                        Span(f"  {i+1}. {src['label']}: ", cls=combine_classes(font_size.sm, font_family.mono)),
+                        Span(f"{len(src['text'])} chars, {len(src['text'].split())} words",
+                             cls=combine_classes(font_size.sm, font_family.mono)),
+                        cls=m.b(1),
+                    )
+                    for i, src in enumerate(TEST_SOURCES)
+                ],
                 Div(
                     Span("FA Available: ", cls=font_size.sm),
                     Span("Yes" if fa_available else "No",

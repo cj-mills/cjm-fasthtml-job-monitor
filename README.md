@@ -45,23 +45,23 @@ graph LR
     services_monitor[services.monitor<br/>Monitor Service]
 
     components_modal --> models
-    components_modal --> html_ids
+    components_modal --> components_tabs_resources_tab
     components_modal --> components_tabs_logs_tab
     components_modal --> components_tabs_progress_tab
-    components_modal --> components_tabs_resources_tab
-    components_overlay --> html_ids
+    components_modal --> html_ids
     components_overlay --> models
+    components_overlay --> html_ids
     components_tabs_logs_tab --> html_ids
     components_tabs_progress_tab --> html_ids
     components_tabs_resources_tab --> models
-    components_trigger --> html_ids
     components_trigger --> models
-    routes_init --> components_overlay
+    components_trigger --> html_ids
     routes_init --> models
-    routes_init --> services_monitor
+    routes_init --> components_trigger
+    routes_init --> components_overlay
     routes_init --> components_modal
     routes_init --> html_ids
-    routes_init --> components_trigger
+    routes_init --> services_monitor
     services_monitor --> models
 ```
 
@@ -233,25 +233,49 @@ def _get_job_data(service, job_id):
 ```
 
 ``` python
+def _get_step_state(state_store, workflow_id, session_id, step_id):
+    """Get step state dict from the state store."""
+    state = state_store.get_state(workflow_id, session_id)
+    return state.get("step_states", {}).get(step_id, {}), state
+
+
+def _update_step_state(state_store, workflow_id, session_id, step_id, step_state, state)
+    "Get step state dict from the state store."
+```
+
+``` python
+def _update_step_state(state_store, workflow_id, session_id, step_id, step_state, state)
+    "Write step state back to the state store."
+```
+
+``` python
 def init_job_monitor_routes(
     monitor_service: JobMonitorService,           # Service instance
     plugin_name: str,                             # Target plugin for jobs
     state_store: SQLiteWorkflowStateStore,         # For persisting job_id
     workflow_id: str,                             # Workflow ID for state access
     step_id: str,                                 # Step ID for state access
-    state_key: str,                               # Key in step state for job_id
+    state_key: str,                               # Key in step state for sequence tracker
     prefix: str,                                  # URL prefix
     overlay_target_id: str,                       # ID of element to overlay
     kb_system_id: Optional[str] = None,           # Keyboard system ID to pause/resume
-    on_complete: Optional[Callable] = None,       # async fn(job, request, sess) -> List[FT]
+    on_complete: Optional[Callable] = None,       # async fn(results, request, sess) -> List[FT]
     on_cancel: Optional[Callable] = None,         # async fn(job, request, sess) -> List[FT]
     on_fail: Optional[Callable] = None,           # async fn(job, request, sess) -> List[FT]
-    job_args_builder: Optional[Callable] = None,  # fn(state_store, workflow_id, session_id) -> (args, kwargs)
+    job_args_builder: Optional[Callable] = None,  # fn(state_store, workflow_id, session_id) -> List[(args, kwargs)]
     config: Optional[JobMonitorConfig] = None,    # UI config
     id_prefix: str = "jm",                        # HTML ID prefix
     icon_fn: Optional[Callable] = None,           # Icon renderer fn(name, **kwargs) -> FT
 ) -> Tuple[APIRouter, JobMonitorUrls, JobMonitorHtmlIds]:  # (router, urls, ids)
-    "Initialize job monitor routes with SSE-based progress streaming."
+    """
+    Initialize job monitor routes with SSE-based progress streaming.
+    
+    Supports job sequences: `job_args_builder` returns a list of (args, kwargs)
+    tuples. Jobs are submitted sequentially, with aggregate progress tracking.
+    Single-source is a list of length 1.
+    
+    `on_complete` receives a list of job result objects (one per source).
+    """
 ```
 
 ``` python
@@ -262,14 +286,16 @@ def check_inflight_job(
     workflow_id: str,                         # Workflow ID
     session_id: str,                          # Session ID
     step_id: str,                             # Step ID
-    state_key: str,                           # State key for job_id
+    state_key: str,                           # State key for sequence tracker
     config: JobMonitorConfig,                 # Display config
     ids: JobMonitorHtmlIds,                   # Element IDs
     urls: JobMonitorUrls,                     # Route URLs
     icon_fn: Optional[Callable] = None,       # Icon renderer
 ) -> Tuple[Optional[FT], Optional[FT], Optional[FT], bool]
     """
-    Check for in-flight job and return appropriate UI state.
+    Check for in-flight job sequence and return appropriate UI state.
+    
+    The state_key stores a sequence tracker dict with a "job_id" field.
     
     Returns:
         - Button element (trigger or progress button)
