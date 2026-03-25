@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "cjm-fasthtml-job-monitor"
+  site-url: "https://cj-mills.github.io/cjm-fasthtml-job-monitor"
+  description: "A FastHTML component library for monitoring plugin job execution with progress tracking, log tailing, resource usage, and cancellation via a tabbed modal with content overlay."
+  repo-branch: main
+  repo-url: "https://github.com/cj-mills/cjm-fasthtml-job-monitor"
