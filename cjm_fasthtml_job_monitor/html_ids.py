@@ -22,14 +22,14 @@ class JobMonitorHtmlIds:
         return f"{self.prefix}-modal"
 
     @property
-    def modal_content(self) -> str:  # Static modal body (not replaced by polling)
+    def modal_content(self) -> str:  # Static modal body (not replaced by SSE)
         """Modal body container (holds tabs + footer, rendered once)."""
         return f"{self.prefix}-modal-content"
 
     @property
-    def poll_anchor(self) -> str:  # Hidden div that carries HTMX polling
-        """Hidden polling anchor (hx-get target, self-replacing)."""
-        return f"{self.prefix}-poll"
+    def sse_connection(self) -> str:  # Hidden div that carries SSE connection
+        """Hidden SSE connection element (sse-connect, receives push updates)."""
+        return f"{self.prefix}-sse"
 
     # --- Overlay ---
 

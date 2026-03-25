@@ -21,7 +21,7 @@ pip install cjm_fasthtml_job_monitor
     │   ├── overlay.ipynb  # Semi-transparent content overlay with loading spinner.
     │   └── trigger.ipynb  # Trigger button and progress button for job monitor.
     ├── routes/ (1)
-    │   └── init.ipynb  # Route factory for job trigger, progress polling, and cancellation.
+    │   └── init.ipynb  # Route factory for job trigger, SSE progress streaming, and cancellation.
     ├── services/ (1)
     │   └── monitor.ipynb  # Service for job execution monitoring with resource telemetry.
     ├── html_ids.ipynb  # Prefix-based HTML ID generator for job monitor DOM elements.
@@ -44,24 +44,24 @@ graph LR
     routes_init[routes.init<br/>Route Factory]
     services_monitor[services.monitor<br/>Monitor Service]
 
-    components_modal --> components_tabs_resources_tab
     components_modal --> models
+    components_modal --> html_ids
     components_modal --> components_tabs_logs_tab
     components_modal --> components_tabs_progress_tab
-    components_modal --> html_ids
-    components_overlay --> models
+    components_modal --> components_tabs_resources_tab
     components_overlay --> html_ids
+    components_overlay --> models
     components_tabs_logs_tab --> html_ids
     components_tabs_progress_tab --> html_ids
     components_tabs_resources_tab --> models
-    components_trigger --> models
     components_trigger --> html_ids
+    components_trigger --> models
     routes_init --> components_overlay
-    routes_init --> components_modal
     routes_init --> models
-    routes_init --> components_trigger
     routes_init --> services_monitor
+    routes_init --> components_modal
     routes_init --> html_ids
+    routes_init --> components_trigger
     services_monitor --> models
 ```
 
@@ -101,26 +101,26 @@ class JobMonitorHtmlIds:
             return f"{self.prefix}-modal"
     
         @property
-        def modal_content(self) -> str:  # Static modal body (not replaced by polling)
+        def modal_content(self) -> str:  # Static modal body (not replaced by SSE)
         "Modal dialog element."
     
-    def modal_content(self) -> str:  # Static modal body (not replaced by polling)
+    def modal_content(self) -> str:  # Static modal body (not replaced by SSE)
             """Modal body container (holds tabs + footer, rendered once)."""
             return f"{self.prefix}-modal-content"
     
         @property
-        def poll_anchor(self) -> str:  # Hidden div that carries HTMX polling
+        def sse_connection(self) -> str:  # Hidden div that carries SSE connection
         "Modal body container (holds tabs + footer, rendered once)."
     
-    def poll_anchor(self) -> str:  # Hidden div that carries HTMX polling
-            """Hidden polling anchor (hx-get target, self-replacing)."""
-            return f"{self.prefix}-poll"
+    def sse_connection(self) -> str:  # Hidden div that carries SSE connection
+            """Hidden SSE connection element (sse-connect, receives push updates)."""
+            return f"{self.prefix}-sse"
     
         # --- Overlay ---
     
         @property
         def overlay(self) -> str:  # Semi-transparent content blocker
-        "Hidden polling anchor (hx-get target, self-replacing)."
+        "Hidden SSE connection element (sse-connect, receives push updates)."
     
     def overlay(self) -> str:  # Semi-transparent content blocker
             """Content overlay element."""
@@ -210,7 +210,8 @@ class JobMonitorHtmlIds:
 
 ### Route Factory (`init.ipynb`)
 
-> Route factory for job trigger, progress polling, and cancellation.
+> Route factory for job trigger, SSE progress streaming, and
+> cancellation.
 
 #### Import
 
@@ -250,7 +251,7 @@ def init_job_monitor_routes(
     id_prefix: str = "jm",                        # HTML ID prefix
     icon_fn: Optional[Callable] = None,           # Icon renderer fn(name, **kwargs) -> FT
 ) -> Tuple[APIRouter, JobMonitorUrls, JobMonitorHtmlIds]:  # (router, urls, ids)
-    "Initialize job monitor routes."
+    "Initialize job monitor routes with SSE-based progress streaming."
 ```
 
 ``` python
@@ -266,15 +267,22 @@ def check_inflight_job(
     ids: JobMonitorHtmlIds,                   # Element IDs
     urls: JobMonitorUrls,                     # Route URLs
     icon_fn: Optional[Callable] = None,       # Icon renderer
-) -> Tuple[Optional[FT], Optional[FT], bool]:  # (trigger_or_progress_btn, overlay_or_placeholder, is_running)
+) -> Tuple[Optional[FT], Optional[FT], Optional[FT], bool]
     """
     Check for in-flight job and return appropriate UI state.
     
     Returns:
         - Button element (trigger or progress button)
         - Overlay element (active overlay or empty placeholder)
+        - Modal element (with SSE connection if running, or empty placeholder)
         - Whether a job is currently running
     """
+```
+
+#### Variables
+
+``` python
+_TERMINAL_STATUSES
 ```
 
 ### Logs Tab (`logs_tab.ipynb`)
@@ -307,10 +315,11 @@ def render_logs_tab(
 
 ``` python
 from cjm_fasthtml_job_monitor.components.modal import (
-    render_poll_anchor,
+    render_sse_connection,
     render_tab_content_oob,
     render_footer_oob,
-    render_poll_response,
+    render_sse_response,
+    get_sse_headers,
     render_job_modal
 )
 ```
@@ -318,17 +327,17 @@ from cjm_fasthtml_job_monitor.components.modal import (
 #### Functions
 
 ``` python
-def render_poll_anchor(
+def render_sse_connection(
     ids: JobMonitorHtmlIds,       # Element IDs
-    urls: JobMonitorUrls,         # Route URLs
-    config: JobMonitorConfig,     # Display config
-    is_active: bool = True,       # Whether polling should continue
-) -> FT:  # Hidden poll anchor div
+    urls: JobMonitorUrls,         # Route URLs (progress URL used for SSE endpoint)
+    job_id: str,                  # Active job ID (passed as query param)
+    is_active: bool = True,       # Whether SSE should be connected
+) -> FT:  # Hidden SSE connection div
     """
-    Render the hidden polling anchor element.
+    Render the hidden SSE connection element.
     
-    When `is_active`, includes hx-get/hx-trigger for continued polling.
-    When not active, renders as an inert hidden div (stops polling).
+    When `is_active`, includes hx-ext=sse and sse-connect for real-time updates.
+    When not active, renders as an inert hidden div (no connection).
     """
 ```
 
@@ -356,8 +365,14 @@ def render_footer_oob(
 ```
 
 ``` python
-def render_poll_response(
-    config: JobMonitorConfig,                    # Display config
+def _make_tab_oob(ids, tab_id, render_fn, *args, **kwargs):
+    """Render a single tab's inner content as OOB swap target."""
+    div = Div(render_fn(*args, **kwargs), id=tab_id)
+    div.attrs['hx-swap-oob'] = "true"
+    return div
+
+
+def render_sse_response(
     ids: JobMonitorHtmlIds,                      # Element IDs
     urls: JobMonitorUrls,                        # Route URLs
     status: str = 'pending',                     # Job status
@@ -365,15 +380,46 @@ def render_poll_response(
     status_message: str = '',                    # Stage message
     started_at: Optional[float] = None,          # Unix timestamp
     completed_at: Optional[float] = None,        # Unix timestamp
-    logs: str = '',                              # Log text
-    resources: Optional[ResourceSnapshot] = None, # Resource data
-) -> tuple:  # (poll_anchor, progress_oob, logs_oob, resources_oob, footer_oob)
+    logs: Optional[str] = None,                  # Log text (None = skip logs tab update)
+    resources: Optional[ResourceSnapshot] = None, # Resource data (None = skip resources tab update)
+    include_footer: bool = False,                # Include footer OOB (only needed on state transitions)
+    extra_oob: Optional[List[FT]] = None,        # Additional OOB elements (cleanup, callbacks)
+) -> FT:  # Div wrapping all OOB elements for sse_message()
+    "Render a single tab's inner content as OOB swap target."
+```
+
+``` python
+def render_sse_response(
+    ids: JobMonitorHtmlIds,                      # Element IDs
+    urls: JobMonitorUrls,                        # Route URLs
+    status: str = 'pending',                     # Job status
+    progress_value: float = 0.0,                 # 0.0 to 1.0
+    status_message: str = '',                    # Stage message
+    started_at: Optional[float] = None,          # Unix timestamp
+    completed_at: Optional[float] = None,        # Unix timestamp
+    logs: Optional[str] = None,                  # Log text (None = skip logs tab update)
+    resources: Optional[ResourceSnapshot] = None, # Resource data (None = skip resources tab update)
+    include_footer: bool = False,                # Include footer OOB (only needed on state transitions)
+    extra_oob: Optional[List[FT]] = None,        # Additional OOB elements (cleanup, callbacks)
+) -> FT:  # Div wrapping all OOB elements for sse_message()
     """
-    Render the poll response: updated poll anchor + OOB tab content updates.
+    Build the OOB update payload for an SSE push.
     
-    This is the primary response for the progress polling route.
-    The poll anchor is the 'primary' swap target (outerHTML on itself).
-    The three tab content divs and footer are OOB swaps.
+    Selectively includes only changed elements:
+    - Progress tab: always included (status/progress/elapsed change frequently)
+    - Logs tab: included only when `logs` is not None
+    - Resources tab: included only when `resources` is not None
+    - Footer: included only when `include_footer` is True (state transitions)
+    """
+```
+
+``` python
+def get_sse_headers() -> List[FT]
+    """
+    Return the HTMX SSE extension script + cleanup script for app headers.
+    
+    Consumers should add these to their FastHTML app's hdrs list.
+    The SSE extension must load after the main HTMX script.
     """
 ```
 
@@ -382,6 +428,7 @@ def render_job_modal(
     config: JobMonitorConfig,                    # Display config
     ids: JobMonitorHtmlIds,                      # Element IDs
     urls: JobMonitorUrls,                        # Route URLs
+    job_id: str = '',                            # Active job ID for SSE connection
     status: str = 'pending',                     # Job status
     progress_value: float = 0.0,                 # 0.0 to 1.0
     status_message: str = '',                    # Stage message
@@ -396,8 +443,8 @@ def render_job_modal(
     
     The tab structure (radio inputs + tab-content wrappers) is static.
     Each tab-content wrapper contains an inner div with a stable ID
-    that gets OOB-swapped by the progress route. This prevents the
-    selected tab from resetting on each poll cycle.
+    that gets OOB-swapped by the SSE stream. This prevents the
+    selected tab from resetting on each update.
     
     Closable via: Escape key, X button (top-right), or clicking backdrop.
     """
@@ -460,7 +507,7 @@ class JobMonitorConfig:
     trigger_label: str = 'Run'  # Trigger button label
     trigger_icon: Optional[str]  # Lucide icon name for trigger button
     progress_label: str = 'View Progress'  # Progress button label (when modal closed)
-    poll_interval_ms: int = 1000  # HTMX polling interval in milliseconds
+    sse_interval_s: float = 0.5  # Server-side SSE push interval in seconds
     log_lines: int = 50  # Number of log lines to show
     overlay_z_index: int = 10  # Overlay z-index
 ```

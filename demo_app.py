@@ -70,6 +70,7 @@ def main():
     from cjm_fasthtml_job_monitor.routes.init import init_job_monitor_routes, check_inflight_job
     from cjm_fasthtml_job_monitor.components.trigger import render_job_trigger
     from cjm_fasthtml_job_monitor.components.overlay import render_job_overlay_placeholder
+    from cjm_fasthtml_job_monitor.components.modal import get_sse_headers
 
     print("\n" + "=" * 70)
     print("Initializing cjm-fasthtml-job-monitor Demo")
@@ -80,7 +81,7 @@ def main():
     # -------------------------------------------------------------------------
     app, rt = fast_app(
         pico=False,
-        hdrs=[*get_daisyui_headers(), create_theme_persistence_script()],
+        hdrs=[*get_daisyui_headers(), create_theme_persistence_script(), *get_sse_headers()],
         title="Job Monitor Demo",
         htmlkw={'data-theme': 'light'},
         secret_key="demo-secret-key",
@@ -267,7 +268,7 @@ def main():
             trigger_label="Force Align",
             trigger_icon="audio-waveform",
         )
-        trigger_el, overlay_el, is_running = check_inflight_job(
+        trigger_el, overlay_el, modal_el, is_running = check_inflight_job(
             monitor_service=monitor_service,
             plugin_name=fa_plugin_name,
             state_store=state_store,
@@ -374,8 +375,8 @@ def main():
             # Result summary area
             Div(id="result-summary"),
 
-            # Modal placeholder (rendered by trigger route)
-            Div(id=jm_ids.modal),
+            # Modal placeholder (or active modal with SSE connection if job running)
+            modal_el,
 
             cls=combine_classes(container, max_w._3xl, m.x.auto, p(6)),
         )

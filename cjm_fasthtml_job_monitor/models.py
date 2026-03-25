@@ -38,6 +38,6 @@ class JobMonitorConfig:
     trigger_label: str = "Run"                  # Trigger button label
     trigger_icon: Optional[str] = None          # Lucide icon name for trigger button
     progress_label: str = "View Progress"       # Progress button label (when modal closed)
-    poll_interval_ms: int = 1000                # HTMX polling interval in milliseconds
+    sse_interval_s: float = 0.5                 # Server-side SSE push interval in seconds
     log_lines: int = 50                         # Number of log lines to show
     overlay_z_index: int = 10                   # Overlay z-index
