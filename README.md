@@ -44,24 +44,24 @@ graph LR
     routes_init[routes.init<br/>Route Factory]
     services_monitor[services.monitor<br/>Monitor Service]
 
-    components_modal --> models
-    components_modal --> components_tabs_resources_tab
-    components_modal --> components_tabs_logs_tab
     components_modal --> components_tabs_progress_tab
+    components_modal --> models
     components_modal --> html_ids
-    components_overlay --> models
+    components_modal --> components_tabs_logs_tab
+    components_modal --> components_tabs_resources_tab
     components_overlay --> html_ids
+    components_overlay --> models
     components_tabs_logs_tab --> html_ids
     components_tabs_progress_tab --> html_ids
     components_tabs_resources_tab --> models
-    components_trigger --> models
     components_trigger --> html_ids
-    routes_init --> models
-    routes_init --> components_trigger
+    components_trigger --> models
     routes_init --> components_overlay
     routes_init --> components_modal
-    routes_init --> html_ids
     routes_init --> services_monitor
+    routes_init --> models
+    routes_init --> html_ids
+    routes_init --> components_trigger
     services_monitor --> models
 ```
 
@@ -266,6 +266,7 @@ def init_job_monitor_routes(
     config: Optional[JobMonitorConfig] = None,    # UI config
     id_prefix: str = "jm",                        # HTML ID prefix
     icon_fn: Optional[Callable] = None,           # Icon renderer fn(name, **kwargs) -> FT
+    restore_trigger_on_complete: bool = True,      # Restore trigger button after completion (False if on_complete handles it)
 ) -> Tuple[APIRouter, JobMonitorUrls, JobMonitorHtmlIds]:  # (router, urls, ids)
     """
     Initialize job monitor routes with SSE-based progress streaming.
@@ -275,6 +276,10 @@ def init_job_monitor_routes(
     Single-source is a list of length 1.
     
     `on_complete` receives a list of job result objects (one per source).
+    
+    When `restore_trigger_on_complete` is False, the trigger slot is not
+    restored after completion — the consumer's `on_complete` callback is
+    responsible for the post-completion UI in that slot.
     """
 ```
 

@@ -73,6 +73,7 @@ def init_job_monitor_routes(
     config: Optional[JobMonitorConfig] = None,    # UI config
     id_prefix: str = "jm",                        # HTML ID prefix
     icon_fn: Optional[Callable] = None,           # Icon renderer fn(name, **kwargs) -> FT
+    restore_trigger_on_complete: bool = True,      # Restore trigger button after completion (False if on_complete handles it)
 ) -> Tuple[APIRouter, JobMonitorUrls, JobMonitorHtmlIds]:  # (router, urls, ids)
     """Initialize job monitor routes with SSE-based progress streaming.
     
@@ -81,6 +82,10 @@ def init_job_monitor_routes(
     Single-source is a list of length 1.
     
     `on_complete` receives a list of job result objects (one per source).
+    
+    When `restore_trigger_on_complete` is False, the trigger slot is not
+    restored after completion — the consumer's `on_complete` callback is
+    responsible for the post-completion UI in that slot.
     """
     config = config or JobMonitorConfig()
     ids = JobMonitorHtmlIds(prefix=id_prefix)
@@ -88,11 +93,6 @@ def init_job_monitor_routes(
     router = APIRouter(prefix=prefix)
 
     # --- Sequence state helpers ---
-    # The sequence tracker stored in step_state[state_key] is a dict:
-    #   {"job_id": str, "source_index": int, "total": int, "results": [...],
-    #    "remaining_args": [{"args": [...], "kwargs": {...}}, ...]}
-    # For single jobs, total=1. When no sequence is active, the key is absent.
-
     def _get_seq(session_id):
         """Get the sequence tracker from state, or None."""
         step_state, _ = _get_step_state(state_store, workflow_id, session_id, step_id)
@@ -129,7 +129,7 @@ def init_job_monitor_routes(
         first_args, first_kwargs = args_list[0]
         job_id = await monitor_service.submit_job(plugin_name, *first_args, **first_kwargs)
 
-        # Store sequence tracker (includes the full args list for remaining sources)
+        # Store sequence tracker
         seq = {
             "job_id": job_id,
             "source_index": 0,
@@ -168,9 +168,9 @@ def init_job_monitor_routes(
         overlay.attrs['hx-swap-oob'] = "true"
         oob_parts.append(overlay)
 
-        # 3. Modal with SSE connection (session_id as stream identifier)
+        # 3. Modal with SSE connection
         modal_el = render_job_modal(
-            config, ids, urls, job_id=session_id,  # SSE stream keyed by session
+            config, ids, urls, job_id=session_id,
             status=status, progress_value=prog_val,
             status_message=msg, started_at=started, completed_at=completed,
             logs=logs, resources=resources, open_on_render=True,
@@ -196,17 +196,18 @@ def init_job_monitor_routes(
             cancel=cancel.to(),
         )
 
-        def _build_cleanup_oob():
+        def _build_cleanup_oob(include_trigger_restore=True):
             """Build the OOB elements for sequence completion/cancel/fail."""
             oob = []
             # Remove overlay
             overlay_ph = render_job_overlay_placeholder(ids)
             overlay_ph.attrs['hx-swap-oob'] = "true"
             oob.append(overlay_ph)
-            # Restore trigger button
-            trigger_btn = render_job_trigger(config, ids, urls, icon_fn=icon_fn)
-            trigger_btn.attrs['hx-swap-oob'] = "true"
-            oob.append(trigger_btn)
+            # Restore trigger button (unless consumer handles post-completion UI)
+            if include_trigger_restore:
+                trigger_btn = render_job_trigger(config, ids, urls, icon_fn=icon_fn)
+                trigger_btn.attrs['hx-swap-oob'] = "true"
+                oob.append(trigger_btn)
             # Kill SSE connection
             inert_sse = render_sse_connection(ids, urls, job_id='', is_active=False)
             inert_sse.attrs['hx-swap-oob'] = "true"
@@ -285,9 +286,9 @@ def init_job_monitor_routes(
                                 ))
                                 prev_logs = logs
                                 await asyncio.sleep(config.sse_interval_s)
-                                continue  # Continue outer loop with new job
+                                continue
 
-                            # All sources complete — fire on_complete with results list
+                            # All sources complete
                             _clear_seq(session_id)
                             resources = monitor_service.get_resource_snapshot(plugin_name)
                             extra_oob = []
@@ -297,7 +298,9 @@ def init_job_monitor_routes(
                                     extra_oob.extend(
                                         result if isinstance(result, (list, tuple)) else [result]
                                     )
-                            extra_oob.extend(_build_cleanup_oob())
+                            extra_oob.extend(_build_cleanup_oob(
+                                include_trigger_restore=restore_trigger_on_complete,
+                            ))
 
                             final_msg = f"Completed ({total} source{'s' if total > 1 else ''})"
                             yield sse_message(render_sse_response(
@@ -325,7 +328,8 @@ def init_job_monitor_routes(
                                     extra_oob.extend(
                                         result if isinstance(result, (list, tuple)) else [result]
                                     )
-                            extra_oob.extend(_build_cleanup_oob())
+                            # Always restore trigger on cancel/fail (job didn't produce results)
+                            extra_oob.extend(_build_cleanup_oob(include_trigger_restore=True))
 
                             yield sse_message(render_sse_response(
                                 ids, urls, status=status, progress_value=prog_val,
@@ -361,7 +365,6 @@ def init_job_monitor_routes(
         seq = _get_seq(session_id)
         if seq:
             await monitor_service.cancel_job(seq["job_id"])
-        # Cancellation is async — the SSE stream detects the terminal state
         return ""
 
     # Build URLs
