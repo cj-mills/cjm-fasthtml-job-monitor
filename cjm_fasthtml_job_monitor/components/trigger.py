@@ -57,6 +57,7 @@ def render_job_progress_button(
         Button(
             Span(cls=combine_classes(loading, loading_styles.spinner, loading_sizes.xs)),
             Span(config.progress_label),
+            type="button",  # Prevent form submission when inside StepFlow form wrapper
             onclick=f"document.getElementById('{ids.modal}').showModal()",
             cls=combine_classes(
                 btn, btn_colors.primary, btn_sizes.sm,

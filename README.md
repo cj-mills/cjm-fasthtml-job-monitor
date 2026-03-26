@@ -44,24 +44,24 @@ graph LR
     routes_init[routes.init<br/>Route Factory]
     services_monitor[services.monitor<br/>Monitor Service]
 
-    components_modal --> models
     components_modal --> html_ids
-    components_modal --> components_tabs_logs_tab
     components_modal --> components_tabs_progress_tab
+    components_modal --> models
     components_modal --> components_tabs_resources_tab
-    components_overlay --> models
+    components_modal --> components_tabs_logs_tab
     components_overlay --> html_ids
+    components_overlay --> models
     components_tabs_logs_tab --> html_ids
     components_tabs_progress_tab --> html_ids
     components_tabs_resources_tab --> models
-    components_trigger --> models
     components_trigger --> html_ids
-    routes_init --> models
+    components_trigger --> models
+    routes_init --> html_ids
     routes_init --> services_monitor
     routes_init --> components_modal
-    routes_init --> components_trigger
-    routes_init --> html_ids
+    routes_init --> models
     routes_init --> components_overlay
+    routes_init --> components_trigger
     services_monitor --> models
 ```
 
