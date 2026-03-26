@@ -44,11 +44,11 @@ graph LR
     routes_init[routes.init<br/>Route Factory]
     services_monitor[services.monitor<br/>Monitor Service]
 
-    components_modal --> components_tabs_progress_tab
     components_modal --> models
     components_modal --> html_ids
     components_modal --> components_tabs_logs_tab
     components_modal --> components_tabs_resources_tab
+    components_modal --> components_tabs_progress_tab
     components_overlay --> html_ids
     components_overlay --> models
     components_tabs_logs_tab --> html_ids
@@ -57,11 +57,11 @@ graph LR
     components_trigger --> html_ids
     components_trigger --> models
     routes_init --> components_overlay
-    routes_init --> components_modal
-    routes_init --> services_monitor
-    routes_init --> models
     routes_init --> html_ids
+    routes_init --> components_modal
+    routes_init --> models
     routes_init --> components_trigger
+    routes_init --> services_monitor
     services_monitor --> models
 ```
 
@@ -205,7 +205,17 @@ class JobMonitorHtmlIds:
         "Modal footer (OOB target for cancel button show/hide)."
     
     def log_container(self) -> str:  # Scrollable log display
+            """Log tailing container."""
+            return f"{self.prefix}-log-container"
+    
+        # --- Keyboard script slot ---
+    
+        @property
+        def kb_script(self) -> str:  # OOB target for keyboard pause/resume scripts
         "Log tailing container."
+    
+    def kb_script(self) -> str:  # OOB target for keyboard pause/resume scripts
+        "Hidden div for keyboard pause/resume script execution via OOB swap."
 ```
 
 ### Route Factory (`init.ipynb`)

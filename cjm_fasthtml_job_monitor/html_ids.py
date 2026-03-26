@@ -92,3 +92,10 @@ class JobMonitorHtmlIds:
     def log_container(self) -> str:  # Scrollable log display
         """Log tailing container."""
         return f"{self.prefix}-log-container"
+
+    # --- Keyboard script slot ---
+
+    @property
+    def kb_script(self) -> str:  # OOB target for keyboard pause/resume scripts
+        """Hidden div for keyboard pause/resume script execution via OOB swap."""
+        return f"{self.prefix}-kb-script"
