@@ -47,21 +47,21 @@ graph LR
     components_modal --> models
     components_modal --> html_ids
     components_modal --> components_tabs_logs_tab
-    components_modal --> components_tabs_resources_tab
     components_modal --> components_tabs_progress_tab
-    components_overlay --> html_ids
+    components_modal --> components_tabs_resources_tab
     components_overlay --> models
+    components_overlay --> html_ids
     components_tabs_logs_tab --> html_ids
     components_tabs_progress_tab --> html_ids
     components_tabs_resources_tab --> models
-    components_trigger --> html_ids
     components_trigger --> models
-    routes_init --> components_overlay
-    routes_init --> html_ids
-    routes_init --> components_modal
+    components_trigger --> html_ids
     routes_init --> models
-    routes_init --> components_trigger
     routes_init --> services_monitor
+    routes_init --> components_modal
+    routes_init --> components_trigger
+    routes_init --> html_ids
+    routes_init --> components_overlay
     services_monitor --> models
 ```
 
@@ -256,6 +256,11 @@ def _update_step_state(state_store, workflow_id, session_id, step_id, step_state
 ``` python
 def _update_step_state(state_store, workflow_id, session_id, step_id, step_state, state)
     "Write step state back to the state store."
+```
+
+``` python
+def _kb_script_oob(ids, js_code)
+    "Wrap a keyboard script in an OOB-swappable div so HTMX executes it."
 ```
 
 ``` python

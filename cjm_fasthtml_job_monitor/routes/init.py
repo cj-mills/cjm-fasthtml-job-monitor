@@ -56,6 +56,13 @@ def _update_step_state(state_store, workflow_id, session_id, step_id, step_state
     state_store.update_state(workflow_id, session_id, state)
 
 # %% ../../nbs/routes/init.ipynb #c10000006
+def _kb_script_oob(ids, js_code):
+    """Wrap a keyboard script in an OOB-swappable div so HTMX executes it."""
+    el = Div(Script(js_code), id=ids.kb_script)
+    el.attrs['hx-swap-oob'] = "true"
+    return el
+
+
 def init_job_monitor_routes(
     monitor_service: JobMonitorService,           # Service instance
     plugin_name: str,                             # Target plugin for jobs
@@ -178,9 +185,9 @@ def init_job_monitor_routes(
         modal_el.attrs['hx-swap-oob'] = "true"
         oob_parts.append(modal_el)
 
-        # 4. Keyboard pause script
+        # 4. Keyboard pause script (wrapped in OOB div for HTMX execution)
         if kb_system_id:
-            oob_parts.append(Script(f"window.kbCoordinator?.pause('{kb_system_id}');"))
+            oob_parts.append(_kb_script_oob(ids, f"window.kbCoordinator?.pause('{kb_system_id}');"))
 
         return tuple(oob_parts)
 
@@ -212,9 +219,9 @@ def init_job_monitor_routes(
             inert_sse = render_sse_connection(ids, urls, job_id='', is_active=False)
             inert_sse.attrs['hx-swap-oob'] = "true"
             oob.append(inert_sse)
-            # Resume keyboard
+            # Resume keyboard (wrapped in OOB div for HTMX execution)
             if kb_system_id:
-                oob.append(Script(f"window.kbCoordinator?.resume('{kb_system_id}');"))
+                oob.append(_kb_script_oob(ids, f"window.kbCoordinator?.resume('{kb_system_id}');"))
             return oob
 
         async def sse_stream():
