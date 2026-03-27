@@ -94,12 +94,15 @@ def main():
     # -------------------------------------------------------------------------
     # App setup
     # -------------------------------------------------------------------------
+    APP_ID = "jobmon"
+
     app, rt = fast_app(
         pico=False,
         hdrs=[*get_daisyui_headers(), create_theme_persistence_script(), *get_sse_headers()],
         title="Job Monitor Demo",
         htmlkw={'data-theme': 'light'},
-        secret_key="demo-secret-key",
+        session_cookie=f'session_{APP_ID}_',
+        secret_key=f'{APP_ID}-demo-secret',
     )
 
     router = APIRouter(prefix="")
