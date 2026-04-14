@@ -1,11 +1,30 @@
 [build-system]
-requires = ["setuptools>=64.0,<76.0"]
+requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name="cjm-fasthtml-job-monitor"
-requires-python=">=3.12"
-dynamic = [ "keywords", "description", "version", "dependencies", "optional-dependencies", "readme", "license", "authors", "classifiers", "entry-points", "scripts", "urls"]
+name = "cjm-fasthtml-job-monitor"
+dynamic = ["version"]
+description = "A FastHTML component library for monitoring plugin job execution with progress tracking, log tailing, resource usage, and cancellation via a tabbed modal with content overlay."
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "Apache-2.0"}
+authors = [{name = "Christian J. Mills", email = "9126128+cj-mills@users.noreply.github.com"}]
+keywords = ['nbdev', 'jupyter', 'notebook', 'python']
+classifiers = ["Natural Language :: English", "Intended Audience :: Developers", "Development Status :: 3 - Alpha", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3 :: Only"]
+dependencies = ['cjm-plugin-system', 'cjm_fasthtml_interactions', 'cjm-workflow-state', 'cjm-fasthtml-keyboard-navigation', 'cjm-fasthtml-daisyui', 'cjm-fasthtml-tailwind', 'cjm-fasthtml-lucide-icons']
 
-[tool.uv]
-cache-keys = [{ file = "pyproject.toml" }, { file = "settings.ini" }, { file = "setup.py" }]
+[project.urls]
+Repository = "https://github.com/cj-mills/cjm-fasthtml-job-monitor"
+Documentation = "https://cj-mills.github.io/cjm-fasthtml-job-monitor"
+
+[project.entry-points.nbdev]
+cjm_fasthtml_job_monitor = "cjm_fasthtml_job_monitor._modidx:d"
+
+[tool.setuptools.dynamic]
+version = {attr = "cjm_fasthtml_job_monitor.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["cjm_fasthtml_job_monitor"]
+
+[tool.nbdev]
