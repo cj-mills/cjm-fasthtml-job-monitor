@@ -44,24 +44,24 @@ graph LR
     routes_init[routes.init<br/>Route Factory]
     services_monitor[services.monitor<br/>Monitor Service]
 
-    components_modal --> html_ids
-    components_modal --> components_tabs_progress_tab
-    components_modal --> models
     components_modal --> components_tabs_resources_tab
+    components_modal --> models
     components_modal --> components_tabs_logs_tab
-    components_overlay --> html_ids
+    components_modal --> components_tabs_progress_tab
+    components_modal --> html_ids
     components_overlay --> models
+    components_overlay --> html_ids
     components_tabs_logs_tab --> html_ids
     components_tabs_progress_tab --> html_ids
     components_tabs_resources_tab --> models
-    components_trigger --> html_ids
     components_trigger --> models
-    routes_init --> html_ids
+    components_trigger --> html_ids
     routes_init --> services_monitor
-    routes_init --> components_modal
     routes_init --> models
     routes_init --> components_overlay
     routes_init --> components_trigger
+    routes_init --> components_modal
+    routes_init --> html_ids
     services_monitor --> models
 ```
 
@@ -677,8 +677,15 @@ def render_job_overlay(
 ``` python
 def render_job_overlay_placeholder(
     ids: JobMonitorHtmlIds,  # Element IDs
-) -> FT:  # Empty div with overlay ID
-    "Render empty placeholder (swapping this in removes the overlay)."
+) -> FT:  # Empty div with overlay ID (display:none)
+    """
+    Render empty placeholder (swapping this in removes the overlay).
+    
+    The placeholder has `display:none` so it contributes no layout
+    (no flex gap slot, no grid track) to the overlay target's layout tree.
+    The active `render_job_overlay` uses `position: absolute` for the same
+    guarantee; both states keep the overlay container structurally invisible.
+    """
 ```
 
 ### Progress Tab (`progress_tab.ipynb`)

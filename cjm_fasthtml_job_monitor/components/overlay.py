@@ -10,7 +10,7 @@ from fasthtml.common import Div, Span, FT
 
 from cjm_fasthtml_daisyui.components.feedback.loading import loading, loading_styles, loading_sizes
 from cjm_fasthtml_daisyui.utilities.semantic_colors import bg_dui
-from cjm_fasthtml_tailwind.utilities.layout import position, inset, z
+from cjm_fasthtml_tailwind.utilities.layout import position, inset, z, display_tw
 from cjm_fasthtml_tailwind.utilities.flexbox_and_grid import flex_display, items, justify
 from cjm_fasthtml_tailwind.utilities.borders import rounded
 from cjm_fasthtml_tailwind.utilities.effects import opacity
@@ -39,6 +39,15 @@ def render_job_overlay(
 # %% ../../nbs/components/overlay.ipynb #c5000008
 def render_job_overlay_placeholder(
     ids: JobMonitorHtmlIds,  # Element IDs
-) -> FT:  # Empty div with overlay ID
-    """Render empty placeholder (swapping this in removes the overlay)."""
-    return Div(id=ids.overlay)
+) -> FT:  # Empty div with overlay ID (display:none)
+    """Render empty placeholder (swapping this in removes the overlay).
+
+    The placeholder has `display:none` so it contributes no layout
+    (no flex gap slot, no grid track) to the overlay target's layout tree.
+    The active `render_job_overlay` uses `position: absolute` for the same
+    guarantee; both states keep the overlay container structurally invisible.
+    """
+    return Div(
+        id=ids.overlay,
+        cls=combine_classes(display_tw.hidden),
+    )
