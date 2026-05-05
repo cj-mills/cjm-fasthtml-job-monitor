@@ -25,6 +25,6 @@ cjm_fasthtml_job_monitor = "cjm_fasthtml_job_monitor._modidx:d"
 version = {attr = "cjm_fasthtml_job_monitor.__version__"}
 
 [tool.setuptools.packages.find]
-include = ["cjm_fasthtml_job_monitor"]
+include = ["cjm_fasthtml_job_monitor*"]
 
 [tool.nbdev]
