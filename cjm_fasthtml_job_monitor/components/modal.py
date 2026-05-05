@@ -12,9 +12,7 @@ from typing import Optional, List
 from fasthtml.common import Div, H3, Button, Input, Form, Span, Dialog, Script, FT
 
 from cjm_fasthtml_daisyui.components.actions.modal import modal, modal_box, modal_action, modal_backdrop
-from cjm_fasthtml_daisyui.components.actions.button import (
-    btn, btn_colors, btn_sizes, btn_styles, btn_modifiers,
-)
+from cjm_fasthtml_daisyui.components.actions.button import btn_modifiers
 from cjm_fasthtml_daisyui.components.navigation.tabs import tab, tabs, tabs_styles, tab_content
 from cjm_fasthtml_daisyui.utilities.semantic_colors import bg_dui, border_dui, text_dui
 from cjm_fasthtml_tailwind.utilities.spacing import p, m
@@ -23,6 +21,9 @@ from cjm_fasthtml_tailwind.utilities.typography import font_size, font_weight
 from cjm_fasthtml_tailwind.utilities.flexbox_and_grid import flex_display, items, justify
 from cjm_fasthtml_tailwind.utilities.layout import display_tw, position, right, top
 from cjm_fasthtml_tailwind.core.base import combine_classes
+
+# Design system recipes (V1 button roles)
+from cjm_fasthtml_design_system.buttons import buttons
 
 from ..html_ids import JobMonitorHtmlIds
 from ..models import JobMonitorUrls, JobMonitorConfig, ResourceSnapshot
@@ -102,7 +103,7 @@ def render_footer_oob(
                 "Cancel",
                 hx_post=urls.cancel,
                 hx_swap="none",
-                cls=combine_classes(btn, btn_colors.error, btn_styles.outline, btn_sizes.sm),
+                cls=buttons.destructive_cancellable,
             )
         )
     footer = Div(
@@ -263,7 +264,7 @@ def render_job_modal(
                 "Cancel",
                 hx_post=urls.cancel,
                 hx_swap="none",
-                cls=combine_classes(btn, btn_colors.error, btn_styles.outline, btn_sizes.sm),
+                cls=buttons.destructive_cancellable,
             )
         )
     footer = Div(
@@ -278,9 +279,9 @@ def render_job_modal(
     # X close button (top-right corner)
     close_btn = Form(
         Button(
-            "\u2715",  # Unicode multiplication sign
+            "✕",  # Unicode multiplication sign
             cls=combine_classes(
-                btn, btn_sizes.sm, btn_modifiers.circle, btn_styles.ghost,
+                buttons.soft_dismissal, btn_modifiers.circle,
                 position.absolute, right._2, top._2,
             ),
         ),

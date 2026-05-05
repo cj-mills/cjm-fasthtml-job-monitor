@@ -10,11 +10,14 @@ from typing import Optional
 
 from fasthtml.common import Div, Button, Span, Script, FT
 
-from cjm_fasthtml_daisyui.components.actions.button import btn, btn_colors, btn_sizes, btn_styles
 from cjm_fasthtml_daisyui.components.feedback.loading import loading, loading_styles, loading_sizes
 from cjm_fasthtml_tailwind.utilities.spacing import m
 from cjm_fasthtml_tailwind.utilities.flexbox_and_grid import flex_display, items, gap
 from cjm_fasthtml_tailwind.core.base import combine_classes
+
+# Design system recipes (V1 button roles, V11 icon-size roles)
+from cjm_fasthtml_design_system.buttons import buttons
+from cjm_fasthtml_design_system.icons import icons
 
 from ..html_ids import JobMonitorHtmlIds
 from ..models import JobMonitorUrls, JobMonitorConfig
@@ -30,7 +33,7 @@ def render_job_trigger(
     """Render the initial trigger button."""
     btn_children = []
     if config.trigger_icon and icon_fn:
-        btn_children.append(icon_fn(config.trigger_icon, size=4))
+        btn_children.append(icon_fn(config.trigger_icon, size=icons.text_button))
     btn_children.append(Span(config.trigger_label))
 
     return Div(
@@ -40,7 +43,7 @@ def render_job_trigger(
             hx_swap="none",
             disabled=disabled,
             cls=combine_classes(
-                btn, btn_styles.outline, btn_sizes.sm,
+                buttons.primary_action,
                 flex_display, items.center, gap(1),
             ),
         ),
@@ -60,7 +63,7 @@ def render_job_progress_button(
             type="button",  # Prevent form submission when inside StepFlow form wrapper
             onclick=f"document.getElementById('{ids.modal}').showModal()",
             cls=combine_classes(
-                btn, btn_colors.primary, btn_sizes.sm,
+                buttons.primary_action,
                 flex_display, items.center, gap(1),
             ),
         ),

@@ -12,7 +12,7 @@ license = {text = "Apache-2.0"}
 authors = [{name = "Christian J. Mills", email = "9126128+cj-mills@users.noreply.github.com"}]
 keywords = ['nbdev', 'jupyter', 'notebook', 'python']
 classifiers = ["Natural Language :: English", "Intended Audience :: Developers", "Development Status :: 3 - Alpha", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3 :: Only"]
-dependencies = ['cjm-plugin-system', 'cjm_fasthtml_interactions', 'cjm-workflow-state', 'cjm-fasthtml-keyboard-navigation', 'cjm-fasthtml-daisyui', 'cjm-fasthtml-tailwind', 'cjm-fasthtml-lucide-icons']
+dependencies = ['cjm-plugin-system', 'cjm_fasthtml_interactions', 'cjm-workflow-state', 'cjm-fasthtml-keyboard-navigation', 'cjm-fasthtml-daisyui', 'cjm-fasthtml-tailwind', 'cjm-fasthtml-lucide-icons', 'cjm_fasthtml_design_system>=0.0.7']
 
 [project.urls]
 Repository = "https://github.com/cj-mills/cjm-fasthtml-job-monitor"
