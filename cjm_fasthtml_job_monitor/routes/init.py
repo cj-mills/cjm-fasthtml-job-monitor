@@ -10,7 +10,8 @@ import asyncio
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from dataclasses import asdict
 
-from fasthtml.common import Div, Span, Script, APIRouter, FT, EventStream, sse_message
+from fasthtml.common import Div, Span, Script, FT, EventStream, sse_message
+from cjm_fasthtml_app_core.core.routing import APIRouter
 
 from cjm_fasthtml_interactions.core.state_store import get_session_id
 from cjm_workflow_state.state_store import SQLiteWorkflowStateStore
